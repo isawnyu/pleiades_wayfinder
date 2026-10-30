@@ -2,6 +2,7 @@
 
 - [ ] Load Pleiades dataset from JSON
 - [ ] For a given Pleiades place find proximal places (radius & quantity as criteria)
+    - [ ] implies we have a gridded spatial index or some other mechanism for finding nearby places 
 - [ ] cull a list of Pleiades places against linked places in itiner-e
 - [ ] For a list of Pleiades places, interrogate the itiner-e API for the subset of those that can be reached via the transport route 
     - [ ] find the shortest subset route of each unique route group
