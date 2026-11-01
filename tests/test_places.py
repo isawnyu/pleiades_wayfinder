@@ -21,10 +21,12 @@ test_data_path = Path("tests/data")
 
 @pytest.fixture()
 def Places():
-    yield PlacesCollection()
+    pc = PlacesCollection()
+    pc.load(pleiades_json_path=test_data_path / "pleiades_json")
+    yield pc
 
 
-class TestPlaces:
+class TestPlacesA:
 
     @classmethod
     def setup_class(cls):
@@ -32,7 +34,13 @@ class TestPlaces:
 
     def test_instantiate_places(self, Places):
         assert isinstance(Places, PlacesCollection)
-        Places.load(pleiades_json_path=test_data_path / "pleiades_json")
+
+
+class TestPlacesB:
+
+    @classmethod
+    def setup_class(cls):
+        logging.getLogger("normalize_space").setLevel(logging.ERROR)
 
     def test_get_place(self):
         pid = "570662"  # Sellasia
