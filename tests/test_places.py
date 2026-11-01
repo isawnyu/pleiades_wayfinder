@@ -9,11 +9,12 @@
 Test the places module
 """
 
+import json
 import logging
 from pathlib import Path
 import pytest
 
-from pleiades_wayfinder.places import PlacesCollection
+from pleiades_wayfinder.places import PlacesCollection, PleiadesPlace
 
 test_data_path = Path("tests/data")
 
@@ -36,3 +37,16 @@ class TestPlaces:
     def test_get_place(self):
         pid = "570662"  # Sellasia
         pass
+
+
+class TestPleiadesPlace:
+
+    def test_place(self):
+        test_place_json_path = test_data_path / "/".join(
+            ("pleiades_json", "570662.json")
+        )
+        with open(test_place_json_path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        p = PleiadesPlace(raw)
+        assert p.pid == "570662"
+        assert p.title == "Sellasia"
