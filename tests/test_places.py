@@ -9,6 +9,7 @@
 Test the places module
 """
 
+import logging
 from pathlib import Path
 import pytest
 
@@ -23,6 +24,10 @@ def Places():
 
 
 class TestPlaces:
+
+    @classmethod
+    def setup_class(cls):
+        logging.getLogger("normalize_space").setLevel(logging.ERROR)
 
     def test_instantiate_places(self, Places):
         assert isinstance(Places, PlacesCollection)

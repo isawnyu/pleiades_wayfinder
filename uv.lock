@@ -33,6 +33,9 @@ wheels = [
 name = "pleiades-wayfinder"
 version = "0.1.0"
 source = { editable = "." }
+dependencies = [
+    { name = "textnorm" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -40,6 +43,7 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "textnorm", specifier = ">=1.2" }]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=9.2.0" }]
@@ -76,4 +80,13 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/79/42/bb4641652e58dedeac2ec51abc1f8cae4fee4ec63899a0999016229a0f2a/pytest-9.2.0.tar.gz", hash = "sha256:97c4f3b1f3c7414aa36465e09b8220f1d03627993bd51b1282e193753c80557b", size = 1797555, upload-time = "2026-10-27T21:30:20.728Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/39/1f5d8c8877a0fa327db959c19341d4be61660de1ab6b7391f9eb805bcd67/pytest-9.2.0-py3-none-any.whl", hash = "sha256:07acdcf88ec174f907dc01af70bf52d49b014bbab03faeeade31c96b18c2e588", size = 411776, upload-time = "2026-10-27T21:30:19.131Z" },
+]
+
+[[package]]
+name = "textnorm"
+version = "1.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b6/1b/0bd32ea2e1dbd6aae113ea7fb6a38454dbb0267d12b25316b241171b1141/textnorm-1.2.tar.gz", hash = "sha256:c04b398d137a6909e4d7f39ee6935d027927b40d083ef11d1f1209f2793662b1", size = 19072, upload-time = "2020-05-07T09:34:06.522Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b0/4e/0fc054e1e9c6d563fd72151427ee4dd37ed5913ca2deb9087f0978f6d472/textnorm-1.2-py3-none-any.whl", hash = "sha256:b826ef97e9f631158d71ef4e24ca25e3a85ac62043e1819f069adbfc68f15995", size = 17529, upload-time = "2020-05-07T09:34:04.371Z" },
 ]
