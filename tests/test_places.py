@@ -19,32 +19,21 @@ from pleiades_wayfinder.places import PlacesCollection, PleiadesPlace
 test_data_path = Path("tests/data")
 
 
-@pytest.fixture()
-def Places():
-    pc = PlacesCollection()
-    pc.load(pleiades_json_path=test_data_path / "pleiades_json")
-    yield pc
-
-
 class TestPlacesA:
 
     @classmethod
     def setup_class(cls):
         logging.getLogger("normalize_space").setLevel(logging.ERROR)
+        pc = PlacesCollection()
+        pc.load(pleiades_json_path=test_data_path / "pleiades_json")
+        cls.pc = pc
 
-    def test_instantiate_places(self, Places):
-        assert isinstance(Places, PlacesCollection)
-
-
-class TestPlacesB:
-
-    @classmethod
-    def setup_class(cls):
-        logging.getLogger("normalize_space").setLevel(logging.ERROR)
+    def test_instantiate_places(self):
+        assert isinstance(self.pc, PlacesCollection)
 
     def test_get_place(self):
         pid = "570662"  # Sellasia
-        pass
+        place = self.pc.get(pid)
 
 
 class TestPleiadesPlace:

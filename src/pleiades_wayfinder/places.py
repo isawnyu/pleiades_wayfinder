@@ -17,6 +17,24 @@ from pathlib import Path
 from pprint import pformat
 
 
+def _pid_valid(val: str) -> bool:
+    if not isinstance(val, str):
+        raise TypeError(f"Got {type(val)} for pid; expected str")
+    val = norm(val)
+    if not val:
+        raise ValueError(f"pid cannot be zero-length string")
+    try:
+        check_val = str(int(val))
+    except ValueError:
+        raise ValueError(f"pid must be a string containing an integer value")
+    else:
+        if check_val != val:
+            raise RuntimeError(
+                f"raw pid value '{val}' failed to round-trip '{check_val}'"
+            )
+    return True
+
+
 class PlacesCollection:
     """
     A collection of Pleiades places and associated functionality
@@ -24,6 +42,12 @@ class PlacesCollection:
 
     def __init__(self):
         self._places = dict()
+
+    def get(self, pid: str) -> PleiadesPlace:
+        if _pid_valid(pid):
+            return self._places[pid]
+        else:
+            raise RuntimeError(f"Invalid PID {pid}")
 
     def load(self, pleiades_json_path: Path):
         """
@@ -70,21 +94,10 @@ class PleiadesPlace:
         """
         Private: set value of Pleiades ID for this place
         """
-        if not isinstance(val, str):
-            raise TypeError(f"Got {type(val)} for pid; expected str")
-        val = norm(val)
-        if not val:
-            raise ValueError(f"pid cannot be zero-length string")
-        try:
-            check_val = str(int(val))
-        except ValueError:
-            raise ValueError(f"pid must be a string containing an integer value")
+        if _pid_valid(val):
+            self._pid = val
         else:
-            if check_val != val:
-                raise RuntimeError(
-                    f"raw pid value '{val}' failed to round-trip '{check_val}'"
-                )
-        self._pid = val
+            raise RuntimeError(f"Invalid PID {val}")
 
     @property
     def title(self) -> str:
