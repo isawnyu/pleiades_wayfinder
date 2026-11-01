@@ -24,6 +24,9 @@ class PlacesCollection:
         self._places = dict()
 
     def load(self, pleiades_json_path: Path):
+        """
+        Load pleiades json from files in directory subtree
+        """
         logger = logging.getLogger(f"{self.__class__.__name__}.load")
         files = [
             f
