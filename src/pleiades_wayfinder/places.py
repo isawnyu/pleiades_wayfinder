@@ -9,6 +9,26 @@
 Handle Pleiades Places
 """
 
+import json
+import logging
+import os
+from pathlib import Path
+
 
 class PlacesCollection:
-    pass
+    """
+    A collection of Pleiades places and associated functionality
+    """
+
+    def __init__(self):
+        self._places = dict()
+
+    def load(self, pleiades_json_path: Path):
+        logger = logging.getLogger(f"{self.__class__.__name__}.load")
+        files = [
+            f
+            for r, d, files in os.walk(pleiades_json_path)
+            for f in files
+            if f.endswith(".json")
+        ]
+        logger.debug(f"found {len(files)} JSON files")

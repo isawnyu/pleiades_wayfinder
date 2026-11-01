@@ -20,3 +20,7 @@ build-backend = "uv_build"
 dev = [
     "pytest>=9.2.0",
 ]
+
+[tool.pytest.ini_options]
+log_cli = true
+log_level = "DEBUG"

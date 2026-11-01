@@ -9,9 +9,12 @@
 Test the places module
 """
 
+from pathlib import Path
 import pytest
 
 from pleiades_wayfinder.places import PlacesCollection
+
+test_data_path = Path("tests/data")
 
 
 @pytest.fixture()
@@ -23,6 +26,7 @@ class TestPlaces:
 
     def test_instantiate_places(self, Places):
         assert isinstance(Places, PlacesCollection)
+        Places.load(pleiades_json_path=test_data_path / "pleiades_json")
 
     def test_get_place(self):
         pid = "570662"  # Sellasia
