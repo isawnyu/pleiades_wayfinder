@@ -19,7 +19,7 @@ from pleiades_wayfinder.places import PlacesCollection, PleiadesPlace
 test_data_path = Path("tests/data")
 
 
-class TestPlacesA:
+class TestPlaces:
 
     @classmethod
     def setup_class(cls):
