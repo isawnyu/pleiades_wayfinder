@@ -9,12 +9,18 @@
 Handle Pleiades Places
 """
 
+import functools
 import json
 import logging
-from .text import norm
+from math import cos, radians
 import os
 from pathlib import Path
 from pprint import pformat
+from shapely import STRtree
+from shapely.errors import GEOSException
+from shapely.geometry import GeometryCollection, shape
+
+from .text import norm
 
 
 def _pid_valid(val: str) -> bool:
@@ -38,6 +44,17 @@ def _pid_valid(val: str) -> bool:
     return True
 
 
+@functools.lru_cache(maxsize=None)
+def meters_to_degrees(m, origin_latitude):
+    """
+    Convert meters to degrees latitude/longitude at the specified origin latitude
+    https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-latitude-longitude-by-some-amount-of-meters
+    """
+    lat = m / 111111
+    lon = m / (111111 * cos(radians(origin_latitude)))
+    return (lat + lon) / 2
+
+
 class PlacesCollection:
     """
     A collection of Pleiades places and associated functionality
@@ -45,6 +62,35 @@ class PlacesCollection:
 
     def __init__(self):
         self._places = dict()
+        self._spatial_index = None  # will be set when needed
+        self._spatial_index_to_pid = dict()  # will be set when needed
+
+    def build_spatial_index(self):
+        """
+        Build a spatial index for the places in this collection
+        """
+
+        logger = logging.getLogger(f"{self.__class__.__name__}.build_spatial_index")
+        i = 0
+        hulls = []
+        logger.debug(f"Building spatial index for {len(self._places)} places")
+        jmod = max(1, len(self._places) // 10)
+        for pi, place in enumerate(self._places.values()):
+            if place.certainly_located:
+                hull = place.hull
+                if hull is not None:
+                    self._spatial_index_to_pid[i] = place.pid
+                    hulls.append(hull)
+                    i += 1
+            if pi % jmod == 0:
+                logger.debug(
+                    f"Collected {pi} of {len(self._places)} concave hulls for places"
+                )
+        logger.debug(
+            f"Starting to build spatial index for {len(hulls)} certainly located places"
+        )
+        self._spatial_index = STRtree(hulls)
+        logger.debug(f"Built spatial index for {len(hulls)} certainly located places")
 
     def get(self, pid: str) -> PleiadesPlace:
         if _pid_valid(pid):
@@ -89,6 +135,7 @@ class PleiadesPlace:
 
         # these values get set the first time they are asked for
         self._certainly_located = None
+        self._hull = None
 
     @property
     def certainly_located(self) -> bool:
@@ -129,6 +176,38 @@ class PleiadesPlace:
                         if any(acc > 1000.0 for acc in accuracies):
                             self._certainly_located = False
         return self._certainly_located
+
+    @property
+    def hull(self):
+        """
+        Return the convex hull of the locations for this place, or None if there are no locations
+        """
+        if self._hull is not None:
+            return self._hull
+        if not self.certainly_located:
+            return None
+        if len(self.raw_data["locations"]) == 0:
+            # make from connections
+            pass
+        else:
+            # make from locations
+            buffered_shapes = []
+            for i, loc in enumerate(self.raw_data["locations"]):
+                if loc["geometry"] and loc["accuracy_value"]:
+                    this_shape = shape(loc["geometry"])
+                    if "darmc" in self.raw_data["locations"][i]["accuracy"]:
+                        radius = max(1000.0, loc["accuracy_value"])
+                    else:
+                        radius = loc["accuracy_value"]
+                    centroid = this_shape.centroid
+                    buffered = this_shape.buffer(meters_to_degrees(radius, centroid.y))
+                    if buffered:
+                        buffered_shapes.append(buffered)
+
+            if buffered_shapes:
+                this_hull = GeometryCollection(buffered_shapes).convex_hull
+                self._hull = this_hull
+                return self._hull
 
     @property
     def pid(self) -> str:

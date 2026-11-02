@@ -56,6 +56,17 @@ class TestPlaces:
         for pid, place in self.pc._places.items():
             assert place.certainly_located == expectations[pid]
 
+    def test_build_spatial_index(self):
+        self.pc.build_spatial_index()
+        assert self.pc._spatial_index is not None
+        assert self.pc._spatial_index_to_pid is not None
+        assert len(self.pc._spatial_index_to_pid) == len(
+            self.pc._spatial_index.geometries
+        )
+        assert (
+            len(self.pc._spatial_index_to_pid) == 3
+        )  # only 3 certainly located places
+
 
 class TestPleiadesPlace:
 
