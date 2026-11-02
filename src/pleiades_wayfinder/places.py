@@ -186,6 +186,7 @@ class PleiadesPlace:
             return self._hull
         if not self.certainly_located:
             return None
+        buffered_shapes = []
         if len(self.raw_data["locations"]) == 0:
             # make from connections
             raise NotImplementedError(
@@ -193,7 +194,6 @@ class PleiadesPlace:
             )
         else:
             # make from locations
-            buffered_shapes = []
             for i, loc in enumerate(self.raw_data["locations"]):
                 if loc["geometry"] and loc["accuracy_value"]:
                     this_shape = shape(loc["geometry"])
@@ -206,10 +206,10 @@ class PleiadesPlace:
                     if buffered:
                         buffered_shapes.append(buffered)
 
-            if buffered_shapes:
-                this_hull = GeometryCollection(buffered_shapes).convex_hull
-                self._hull = this_hull
-                return self._hull
+        if buffered_shapes:
+            this_hull = GeometryCollection(buffered_shapes).convex_hull
+            self._hull = this_hull
+            return self._hull
 
     @property
     def pid(self) -> str:
