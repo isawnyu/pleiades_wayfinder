@@ -35,6 +35,27 @@ class TestPlaces:
         pid = "570662"  # Sellasia
         place = self.pc.get(pid)
 
+    def test_get_place_invalid_pid(self):
+        with pytest.raises(ValueError):
+            self.pc.get("not-a-valid-pid")
+
+    def test_iterate_places(self):
+        for place in self.pc._places.values():
+            assert isinstance(place, PleiadesPlace)
+
+    def test_iterate_places_certainly_located(self):
+        expectations = {
+            "570662": True,
+            "570330": False,  # because DARMC location with accuracy = 10,000
+            "570575": True,
+            "570723": False,  # because DARMC location with accuracy = 10,000
+            "570323": False,  # because DARMC location with accuracy = 10,000
+            "570685": True,
+            "570265": False,  # because DARMC location with accuracy = 10,000
+        }
+        for pid, place in self.pc._places.items():
+            assert place.certainly_located == expectations[pid]
+
 
 class TestPleiadesPlace:
 

@@ -18,6 +18,9 @@ from pprint import pformat
 
 
 def _pid_valid(val: str) -> bool:
+    """
+    Determine if a Pleiades ID is valid.  Valid PIDs are strings containing integer values.
+    """
     if not isinstance(val, str):
         raise TypeError(f"Got {type(val)} for pid; expected str")
     val = norm(val)
@@ -82,6 +85,50 @@ class PleiadesPlace:
         self.raw_data = raw_data
         self._set_pid(raw_data["id"])
         self._set_title(raw_data["title"])
+        self._set_place_types(raw_data["placeTypes"])
+
+        # these values get set the first time they are asked for
+        self._certainly_located = None
+
+    @property
+    def certainly_located(self) -> bool:
+        """
+        Is this place really certainly located?
+        """
+        if self._certainly_located is not None:
+            pass  # we will use previously determined response
+        else:
+            self._certainly_located = True  # assume true until proven otherwise
+            if "unlocated" in self.place_types:
+                self._certainly_located = False
+            else:
+                if len(self.raw_data["locations"]) == 0:
+                    if [
+                        conn
+                        for conn in self.raw_data["connections"]
+                        if conn["connection_type"] in {"located_at", "part_of_physical"}
+                    ]:
+                        pass
+                    else:
+                        self._certainly_located = False
+                else:
+                    precisions = set()
+                    feature_d = {
+                        feature["id"]: feature for feature in self.raw_data["features"]
+                    }
+                    for loc in self.raw_data["locations"]:
+                        loc_id = loc["id"]
+                        feature = feature_d[loc_id]
+                        precisions.add(feature["properties"]["location_precision"])
+                    if "rough" in precisions:
+                        self._certainly_located = False
+                    else:
+                        accuracies = {
+                            loc["accuracy_value"] for loc in self.raw_data["locations"]
+                        }
+                        if any(acc > 1000.0 for acc in accuracies):
+                            self._certainly_located = False
+        return self._certainly_located
 
     @property
     def pid(self) -> str:
@@ -98,6 +145,23 @@ class PleiadesPlace:
             self._pid = val
         else:
             raise RuntimeError(f"Invalid PID {val}")
+
+    @property
+    def place_types(self) -> list[str]:
+        """
+        Return value of place types for this place
+        """
+        return self._place_types
+
+    def _set_place_types(self, val: list[str]):
+        """
+        Private: set value of place types for this place
+        """
+        if not isinstance(val, list):
+            raise TypeError(f"Got {type(val)} for place_types; expected list")
+        if not all(isinstance(v, str) for v in val):
+            raise TypeError(f"Got non-str value in place_types list")
+        self._place_types = list({norm(v) for v in val if norm(v)})
 
     @property
     def title(self) -> str:
