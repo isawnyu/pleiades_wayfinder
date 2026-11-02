@@ -188,7 +188,9 @@ class PleiadesPlace:
             return None
         if len(self.raw_data["locations"]) == 0:
             # make from connections
-            pass
+            raise NotImplementedError(
+                f"Making hull from connections not yet implemented (pid: {self.pid})"
+            )
         else:
             # make from locations
             buffered_shapes = []
