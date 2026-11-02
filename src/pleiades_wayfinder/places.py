@@ -98,6 +98,27 @@ class PlacesCollection:
         else:
             raise RuntimeError(f"Invalid PID {pid}")
 
+    def get_nearby_places(
+        self, pid: str, max_distance_meters: float
+    ) -> list[PleiadesPlace]:
+        """
+        Return a list of PleiadesPlace objects for places within the specified distance of this place
+        """
+        if not self._spatial_index:
+            self.build_spatial_index()
+        place = self.get(pid)
+        if not place.certainly_located:
+            raise RuntimeError(f"Place {pid} is not certainly located")
+        hull = place.hull
+        if not hull:
+            raise RuntimeError(f"Place {pid} has no convex hull")
+        buffered_hull = hull.buffer(
+            meters_to_degrees(max_distance_meters, hull.centroid.y)
+        )
+        match_indexes = self._spatial_index.query(buffered_hull)  # type: ignore
+        matched_pids = [self._spatial_index_to_pid[i] for i in match_indexes]
+        return [self.get(pid) for pid in matched_pids]
+
     def load(self, pleiades_json_path: Path):
         """
         Load pleiades json from files in directory subtree
