@@ -10,6 +10,7 @@ requires-python = ">=3.15"
 dependencies = [
     "shapely>=2.2.0",
     "textnorm>=1.2",
+    "webiquette",
 ]
 
 [project.scripts]
@@ -27,3 +28,6 @@ dev = [
 [tool.pytest.ini_options]
 log_cli = true
 log_level = "DEBUG"
+
+[tool.uv.sources]
+webiquette = { git = "https://github.com/isawnyu/webiquette.git" }
