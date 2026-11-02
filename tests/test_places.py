@@ -79,3 +79,39 @@ class TestPleiadesPlace:
         p = PleiadesPlace(raw)
         assert p.pid == "570662"
         assert p.title == "Sellasia"
+
+    def test_place_certainly_located(self):
+        test_place_json_path = test_data_path / "/".join(
+            ("pleiades_json", "570662.json")
+        )
+        with open(test_place_json_path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        p = PleiadesPlace(raw)
+        assert p.certainly_located is True
+
+    def test_place_not_certainly_located(self):
+        test_place_json_path = test_data_path / "/".join(
+            ("pleiades_json", "570330.json")
+        )
+        with open(test_place_json_path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        p = PleiadesPlace(raw)
+        assert p.certainly_located is False
+
+    def test_place_hull(self):
+        test_place_json_path = test_data_path / "/".join(
+            ("pleiades_json", "570662.json")
+        )
+        with open(test_place_json_path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        p = PleiadesPlace(raw)
+        assert p.hull is not None
+
+    def test_place_hull_not_certainly_located(self):
+        test_place_json_path = test_data_path / "/".join(
+            ("pleiades_json", "570330.json")
+        )
+        with open(test_place_json_path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        p = PleiadesPlace(raw)
+        assert p.hull is None
