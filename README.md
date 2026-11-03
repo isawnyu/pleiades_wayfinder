@@ -1,10 +1,10 @@
 # Pleiades Wayfinder
 
 - [x] Load Pleiades dataset from JSON
-- [ ] For a given Pleiades place find proximal places (radius & quantity as criteria)
-    - [ ] implies we have a gridded spatial index or some other mechanism for finding nearby places 
+- [x] For a given Pleiades place find proximal places (radius & quantity as criteria)
+    - [x] implies we have a gridded spatial index or some other mechanism for finding nearby places 
 - [ ] cull a list of Pleiades places against linked places in itiner-e
-- [ ] For a list of Pleiades places, interrogate the itiner-e API for the subset of those that can be reached via the transport route 
+- [x] For a list of Pleiades places, interrogate the itiner-e API for the subset of those that can be reached via the transport route 
     - [ ] find the shortest subset route of each unique route group
 - [ ] produce a JSON file of each route-proximal place to the starting place
 
