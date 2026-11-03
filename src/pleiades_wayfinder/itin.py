@@ -35,7 +35,8 @@ class ItinPathfinder:
         # self.session.headers.update(self.my_headers)
         # logger = logging.getLogger(__name__)
         # logger.debug(f"headers: {pformat(self.my_headers, indent=2)}")
-        pass
+        self.session = requests.Session()
+        self.session.headers.update(self.my_headers)
 
     def find_path(self, from_pid: str, to_pid: str, month="jan") -> dict:
         """
@@ -59,7 +60,7 @@ class ItinPathfinder:
                 }
             ],
         }
-        response = requests.post(url, json=query, headers=self.my_headers)
+        response = self.session.post(url, json=query, headers=self.my_headers)
         #        response = self.session.post(url, data=query)
 
         return response.json()
