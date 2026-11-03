@@ -23,7 +23,11 @@ class TestItinPathfinder:
 
     @classmethod
     def setup_class(cls):
+        logging.basicConfig()
         logging.getLogger("normalize_space").setLevel(logging.ERROR)
+        requests_log = logging.getLogger("urllib3")
+        requests_log.setLevel(logging.DEBUG)
+        requests_log.propagate = True
         cls.itin = ItinPathfinder()
 
     def test_instantiate_itin(self):

@@ -9,12 +9,11 @@
 Code for working with itiner-e
 """
 
+from datetime import timedelta
 import logging
-from pprint import pformat
+from requests_cache import CachedSession
 
-# from requests_cache import CachedSession
-import requests
-from http.client import HTTPConnection
+DEFAULT_CACHE_EXPIRE = timedelta(days=11)
 
 
 class ItinPathfinder:
@@ -31,22 +30,13 @@ class ItinPathfinder:
     }
 
     def __init__(self):
-        # self.session = CachedSession()
-        # self.session.headers.update(self.my_headers)
-        # logger = logging.getLogger(__name__)
-        # logger.debug(f"headers: {pformat(self.my_headers, indent=2)}")
-        self.session = requests.Session()
+        self.session = CachedSession(allowable_methods=("GET", "POST"))
         self.session.headers.update(self.my_headers)
 
     def find_path(self, from_pid: str, to_pid: str, month="jan") -> dict:
         """
         Find a path between two Pleiades places using itiner-e
         """
-        logging.basicConfig()
-        logger = logging.getLogger(__name__)
-        requests_log = logging.getLogger("urllib3")
-        requests_log.setLevel(logging.DEBUG)
-        requests_log.propagate = True
         url = f"https://itiner-e.org/route-segments/path-finder"
         query = {
             "preferredRouteTypes": [],
@@ -60,7 +50,13 @@ class ItinPathfinder:
                 }
             ],
         }
-        response = self.session.post(url, json=query, headers=self.my_headers)
-        #        response = self.session.post(url, data=query)
+        response = self.session.post(url, json=query)
+        if response.status_code != 200:
+            response.raise_for_status()
+        logger = logging.getLogger(self.__class__.__name__ + ".find_path")
+        if response.from_cache:
+            logger.debug(f"find_path response was from cache")
+        else:
+            logger.debug(f"find_path response was not from cache")
 
         return response.json()
