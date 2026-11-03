@@ -13,7 +13,7 @@ from datetime import timedelta
 import logging
 from requests_cache import CachedSession
 
-DEFAULT_CACHE_EXPIRE = timedelta(days=11)
+DEFAULT_CACHE_EXPIRE = timedelta(days=37)
 
 
 class ItinPathfinder:
