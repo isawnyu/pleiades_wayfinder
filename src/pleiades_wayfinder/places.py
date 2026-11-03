@@ -117,7 +117,7 @@ class PlacesCollection:
         )
         match_indexes = self._spatial_index.query(buffered_hull)  # type: ignore
         matched_pids = [self._spatial_index_to_pid[i] for i in match_indexes]
-        return [self.get(pid) for pid in matched_pids]
+        return [self.get(mpid) for mpid in matched_pids if mpid != pid]
 
     def load(self, pleiades_json_path: Path):
         """

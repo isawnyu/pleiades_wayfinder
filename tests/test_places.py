@@ -73,9 +73,9 @@ class TestPlaces:
         nearby_places = self.pc.get_nearby_places(
             pid, max_distance_meters=100 * 1000
         )  # 100 km
-        assert len(nearby_places) == 3
+        assert len(nearby_places) == 2
         matched_pids = {p.pid for p in nearby_places}
-        assert matched_pids == {"570662", "570685", "570575"}
+        assert matched_pids == {"570685", "570575"}
 
 
 class TestPleiadesPlace:
