@@ -11,9 +11,12 @@ Code for working with itiner-e
 
 from datetime import timedelta
 import logging
+from pathlib import Path
+from platformdirs import user_cache_path
 from requests_cache import CachedSession
 
 DEFAULT_CACHE_EXPIRE = timedelta(days=37)
+DEFAULT_CACHE_PATH = user_cache_path("pleiades_wayfinder") / "itiner-e_cache"
 
 
 class ItinPathfinder:
@@ -29,8 +32,17 @@ class ItinPathfinder:
         "Origin": "https://itiner-e.org",
     }
 
-    def __init__(self):
-        self.session = CachedSession(allowable_methods=("GET", "POST"))
+    def __init__(
+        self,
+        cache_path: Path = DEFAULT_CACHE_PATH,
+        cache_expire: timedelta = DEFAULT_CACHE_EXPIRE,
+    ):
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        self.session = CachedSession(
+            cache_name=cache_path,
+            expire_after=cache_expire,
+            allowable_methods=("GET", "POST"),
+        )
         self.session.headers.update(self.my_headers)
 
     def find_path(self, from_pid: str, to_pid: str, month="jan") -> dict:

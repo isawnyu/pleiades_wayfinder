@@ -7,6 +7,7 @@
 - [x] For a list of Pleiades places, interrogate the itiner-e API for the subset of those that can be reached via the transport route 
     - [ ] find the shortest subset route of each unique route group
 - [ ] produce a JSON file of each route-proximal place to the starting place
+- [ ] integrate platformdirs to facilitate cross-run caching without cluttering up the package space
 
 ## itiner-e api request
 
