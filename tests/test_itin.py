@@ -36,7 +36,17 @@ class TestItinPathfinder:
     def test_find_path(self):
         from_pid = "570662"  # Sellasia
         to_pid = "570685"  # Sparta
-        result = self.itin.find_path(from_pid, to_pid, month="jan")
+        result = self.itin.find_path(from_pid, to_pid)
         assert isinstance(result, dict)
         logger = logging.getLogger(__name__)
         logger.debug(f"find_path result: {pformat(result, indent=2)}")
+
+    def test_find_path_multiple(self):
+        from_pid = "570662"  # Sellasia
+        to_pids = ["570685", "570575"]
+        logger = logging.getLogger(__name__)
+        for to_pid in to_pids:
+            logger.debug(f"Finding path from {from_pid} to {to_pid}")
+            result = self.itin.find_path(from_pid, to_pid)
+            assert isinstance(result, dict)
+            logger.debug(f"find_path result: {pformat(result, indent=2)}")
