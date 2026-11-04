@@ -168,6 +168,7 @@ def main(**kwargs):
 
     logging.getLogger("normalize_space").setLevel(logging.ERROR)  # hush
     logging.getLogger("PlacesCollection.load").setLevel(logging.INFO)
+    logging.getLogger("requests_cache.policy.actions").setLevel(logging.ERROR)
     json_path = Path(kwargs["pleiades_json_path"]).resolve()
     if not json_path.is_dir():
         raise NotADirectoryError(json_path)
