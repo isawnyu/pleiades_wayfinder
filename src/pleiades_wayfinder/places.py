@@ -171,13 +171,17 @@ class PleiadesPlace:
                 self._certainly_located = False
             else:
                 if len(self.raw_data["locations"]) == 0:
-                    if [
-                        conn
-                        for conn in self.raw_data["connections"]
-                        if conn["connection_type"] in {"located_at", "part_of_physical"}
-                    ]:
-                        pass
-                    else:
+                    try:
+                        if [
+                            conn
+                            for conn in self.raw_data["connections"]
+                            if conn["connection_type"]
+                            in {"located_at", "part_of_physical"}
+                        ]:
+                            pass
+                        else:
+                            self._certainly_located = False
+                    except KeyError:
                         self._certainly_located = False
                 else:
                     precisions = set()
@@ -192,9 +196,13 @@ class PleiadesPlace:
                         self._certainly_located = False
                     else:
                         accuracies = {
-                            loc["accuracy_value"] for loc in self.raw_data["locations"]
+                            loc["accuracy_value"]
+                            for loc in self.raw_data["locations"]
+                            if loc["accuracy_value"] is not None
                         }
-                        if any(acc > 1000.0 for acc in accuracies):
+                        if len(accuracies) == 0 or any(
+                            acc > 1000.0 for acc in accuracies
+                        ):
                             self._certainly_located = False
         return self._certainly_located
 

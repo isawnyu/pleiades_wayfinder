@@ -13,9 +13,11 @@ from airtight.cli import configure_commandline
 import logging
 from os import environ
 from pathlib import Path
+import re
 from timeit import default_timer as timer
 
 from pleiades_wayfinder.places import PlacesCollection
+from pleiades_wayfinder.text import norm
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +28,7 @@ if pdata_dir is None:
 DEFAULT_JSON_PATH = Path(pdata_dir).resolve()
 if not DEFAULT_JSON_PATH.is_dir():
     raise NotADirectoryError(DEFAULT_JSON_PATH)
-
+rx_puri = re.compile(r"https://pleiades.stoa.org/places/(?P<pid>\d+)")
 
 DEFAULT_LOG_LEVEL = logging.WARNING
 OPTIONAL_ARGUMENTS = [
@@ -66,7 +68,34 @@ POSITIONAL_ARGUMENTS = [
 ]
 
 
+def input_pid() -> str:
+    """
+    Prompt the user for a Pleiades ID or URI and convert it to a pid
+    """
+    while True:
+        while True:
+            raw = norm(input("Enter a Pleiades ID or URI: "))
+            if raw:
+                break
+        if raw.lower() in {"q", "quit", "exit"}:
+            exit()
+        m = rx_puri.fullmatch(raw)
+        if m:
+            pid = m.group("pid")
+        else:
+            pid = raw
+        try:
+            str(int(pid))
+        except ValueError:
+            print(f"Invalid PID '{pid}'. Try again.")
+        else:
+            return pid
+
+
 def setup_places_collection(json_path: Path) -> PlacesCollection:
+    """
+    Setup the Pleiades places collection and read JSON into it from json_path
+    """
     pc = PlacesCollection()
     logger.info(f"Loading places from {json_path} ...")
     start = timer()
@@ -103,6 +132,22 @@ def main(**kwargs):
     if not json_path.is_dir():
         raise NotADirectoryError(json_path)
     pc = setup_places_collection(json_path)
+    from_pid = input_pid()
+    nearby_places = []
+    distance = 10000.0  # meters
+    increment = 1000.0
+    max_count = int(kwargs["candidate_count"])
+    while True:
+        nearby_places = pc.get_nearby_places(from_pid, max_distance_meters=distance)
+        if len(nearby_places) < max_count:
+            distance += increment
+        else:
+            break
+    print(
+        f"Found {len(nearby_places)} certainly located places within {distance / 1000.0:,} kilometers:"
+    )
+    for place in sorted(nearby_places, key=lambda p: p.title.lower()):
+        print(f" - {place.pid}: {place.title}")
 
 
 if __name__ == "__main__":
