@@ -10,12 +10,15 @@
 Interact with Pleiades data and Itiner-e API to find paths between places"""
 
 from airtight.cli import configure_commandline
+from datetime import datetime
 import logging
 from os import environ
 from pathlib import Path
+from pprint import pprint
 import re
 from timeit import default_timer as timer
 
+from pleiades_wayfinder.itin import ItinPathfinder
 from pleiades_wayfinder.places import PlacesCollection
 from pleiades_wayfinder.text import norm
 
@@ -163,10 +166,13 @@ def main(**kwargs):
     main function
     """
 
+    logging.getLogger("normalize_space").setLevel(logging.ERROR)  # hush
+    logging.getLogger("PlacesCollection.load").setLevel(logging.INFO)
     json_path = Path(kwargs["pleiades_json_path"]).resolve()
     if not json_path.is_dir():
         raise NotADirectoryError(json_path)
     pc = setup_places_collection(json_path)
+    ipf = ItinPathfinder()
     from_pid = input_pid()
     distance = kwargs["distance"]
     if isinstance(distance, (str, int)):
@@ -182,6 +188,11 @@ def main(**kwargs):
     )
     for place in sorted(nearby_places, key=lambda p: p.title.lower()):
         print(f" - {place.pid}: {place.title}")
+    results = {}
+    month = datetime.now().strftime("%b").lower()
+    for to_pid in [p.pid for p in nearby_places]:
+        results[to_pid] = ipf.find_path(from_pid, to_pid, month=month)
+    pprint(results, indent=2)
 
 
 if __name__ == "__main__":

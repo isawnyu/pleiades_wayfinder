@@ -52,13 +52,15 @@ class ItinPathfinder:
         self._max_request_duration = 0.0
         self._max_interval_between_requests = 0.0
         self._last_sleep_duration = 0.0
-        self._last_request_end_datetime = datetime.now()
+        self._last_request_end_datetime = None
 
     def find_path(self, from_pid: str, to_pid: str, month="jan") -> dict:
         """
         Find a path between two Pleiades places using itiner-e
         """
         logger = logging.getLogger(self.__class__.__name__ + ".find_path")
+        if self._last_request_end_datetime is None:
+            self._last_request_end_datetime = datetime.now()
 
         url = f"https://itiner-e.org/route-segments/path-finder"
         query = {
@@ -85,7 +87,7 @@ class ItinPathfinder:
                 this_request_end_datetime - self._last_request_end_datetime
             ).total_seconds(),
         )
-        self._max_request_end_datetime = this_request_end_datetime
+        self._last_request_end_datetime = this_request_end_datetime
 
         if response.status_code != 200:
             response.raise_for_status()
@@ -96,17 +98,18 @@ class ItinPathfinder:
             logger.debug(f"find_path response was not from cache")
             this_sleep_duration = max(
                 self._delay_minimum,
-                self._max_interval_between_requests - self._last_sleep_duration / 2,
-                self._max_request_duration * 2,
+                self._max_interval_between_requests - self._last_sleep_duration,
+                self._max_request_duration,
+                self._last_sleep_duration,
             )
             if this_sleep_duration > 0.00:
                 if this_sleep_duration != self._last_sleep_duration:
                     logger.info(
-                        f"Sleeping for {this_sleep_duration} seconds to respect rate limit"
+                        f"Sleeping for {this_sleep_duration} seconds to respect itiner-e performance"
                     )
                 else:
                     logger.debug(
-                        f"Sleeping for {this_sleep_duration} seconds to respect rate limit"
+                        f"Sleeping for {this_sleep_duration} seconds to respect itiner-e performance"
                     )
                 sleep(this_sleep_duration)
                 self._last_sleep_duration = this_sleep_duration
