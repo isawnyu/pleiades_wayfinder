@@ -3,6 +3,12 @@ revision = 5
 requires-python = ">=3.15"
 
 [[package]]
+name = "airtight"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/63/0a/235cdd7fa46383883916e803c71c8f0bb71abd8eed0ba760a9580511de3d/airtight-0.2.0.tar.gz", hash = "sha256:dcfbd8833dd529d6c2ea5601afebf03dc7f624d94fa735cfaa8c6928d120c057", size = 16903, upload-time = "2017-10-08T22:43:12.989Z" }
+
+[[package]]
 name = "attrs"
 version = "26.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -170,6 +176,7 @@ name = "pleiades-wayfinder"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "airtight" },
     { name = "platformdirs" },
     { name = "requests" },
     { name = "requests-cache" },
@@ -184,6 +191,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "airtight", specifier = ">=0.2.0" },
     { name = "platformdirs", specifier = ">=4.14.3" },
     { name = "requests", specifier = ">=2.34.2" },
     { name = "requests-cache", specifier = ">=1.3.3" },
