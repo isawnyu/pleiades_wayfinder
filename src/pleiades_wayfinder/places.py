@@ -59,6 +59,10 @@ ROMAN_ERA_PERIODS = {
 }
 
 
+class UnknownPIDError(ValueError):
+    pass
+
+
 def _pid_valid(val: str) -> bool:
     """
     Determine if a Pleiades ID is valid.  Valid PIDs are strings containing integer values.
@@ -100,6 +104,7 @@ class PlacesCollection:
         self._places = dict()
         self._spatial_index = None  # will be set when needed
         self._spatial_index_to_pid = dict()  # will be set when needed
+        self._known_to_itinere = set()  # Pleiades PIDS known to Itiner-e
 
     def build_spatial_index(self):
         """
@@ -133,7 +138,10 @@ class PlacesCollection:
 
     def get(self, pid: str) -> PleiadesPlace:
         if _pid_valid(pid):
-            return self._places[pid]
+            try:
+                return self._places[pid]
+            except KeyError:
+                raise UnknownPIDError(pid)
         else:
             raise RuntimeError(f"Invalid PID {pid}")
 
@@ -167,11 +175,28 @@ class PlacesCollection:
         matched_pids = [self._spatial_index_to_pid[i] for i in match_indexes]
         return [self.get(mpid) for mpid in matched_pids if mpid != pid]
 
-    def load(self, pleiades_json_path: Path):
+    def load(self, pleiades_json_path: Path, itiner_e_json_path: Path):
         """
         Load pleiades json from files in directory subtree
         """
         logger = logging.getLogger(f"{self.__class__.__name__}.load")
+        self._load_itiner_e(itiner_e_json_path)
+        self._load_pleiades(pleiades_json_path)
+
+    def _load_itiner_e(self, itiner_e_json_path: Path):
+        with open(itiner_e_json_path, "r", encoding="utf-8") as f:
+            for line in f:
+                obj = json.loads(line)
+                try:
+                    pp = obj["pleiadesPlaces"]
+                except KeyError:
+                    pass
+                else:
+                    for p in pp:
+                        self._known_to_itinere.add(str(p["id"]))
+
+    def _load_pleiades(self, pleiades_json_path: Path):
+        logger = logging.getLogger(f"{self.__class__.__name__}._load_pleiades")
         file_paths = [
             Path(dirpath) / fn
             for dirpath, dirnames, filenames in os.walk(pleiades_json_path)
@@ -181,13 +206,17 @@ class PlacesCollection:
         logger.debug(f"found {len(file_paths)} JSON files")
         logger.debug(pformat(file_paths, indent=2))
         for fpath in file_paths:
-            with open(fpath, mode="r", encoding="utf-8") as f:
-                pp = PleiadesPlace(json.load(f))
-            self._places[pp.pid] = pp
+            # ignore places not known to itiner-e
+            pid = fpath.stem
+            str(int(pid))
+            if pid in self._known_to_itinere:
+                with open(fpath, mode="r", encoding="utf-8") as f:
+                    pp = PleiadesPlace(json.load(f))
+                self._places[pp.pid] = pp
         logger.debug(f"read {len(self._places)} Pleiades places from JSON files")
-        if len(file_paths) != len(self._places):
-            raise RuntimeError(
-                f"Mismatch between number of JSON files found {(len(file_paths))} and number of Pleiades places read from JSON {(len(self._places))}"
+        if len(self._places) != len(self._known_to_itinere):
+            logger.warning(
+                f"Mismatch between number of JSON files loaded {(len(self._places))} from {len(file_paths)} JSON files found and the number of Pleiades places known to itiner-e {(len(self._known_to_itinere))}"
             )
 
 

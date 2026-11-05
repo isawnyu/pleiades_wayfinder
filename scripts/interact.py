@@ -19,7 +19,7 @@ import re
 from timeit import default_timer as timer
 
 from pleiades_wayfinder.itin import ItinPathfinder
-from pleiades_wayfinder.places import PlacesCollection
+from pleiades_wayfinder.places import PlacesCollection, UnknownPIDError
 from pleiades_wayfinder.text import norm
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,14 @@ if pdata_dir is None:
 DEFAULT_JSON_PATH = Path(pdata_dir).resolve()
 if not DEFAULT_JSON_PATH.is_dir():
     raise NotADirectoryError(DEFAULT_JSON_PATH)
+
+idata_file = environ.get("ITINDATA_FILE")
+if idata_file is None:
+    raise ValueError(f"environment variable ITINDATA_FILE returns None")
+DEFAULT_ITIN_FILE_PATH = Path(idata_file).resolve()
+if not DEFAULT_ITIN_FILE_PATH.is_file():
+    raise FileNotFoundError(DEFAULT_ITIN_FILE_PATH)
+
 rx_puri = re.compile(r"https://pleiades.stoa.org/places/(?P<pid>\d+)")
 
 ITIN_PLACE_TYPES = {"settlement", "port", "fort", "station", "bridge", "pass", "oasis"}
@@ -75,6 +83,13 @@ OPTIONAL_ARGUMENTS = [
         "default candidate search distance in meters",
         False,
     ],
+    [
+        "-i",
+        "--itin-json-path",
+        str(DEFAULT_ITIN_FILE_PATH),
+        "path to JSONLD file containing Itiner-e data",
+        False,
+    ],
 ]
 POSITIONAL_ARGUMENTS = [
     # each row is a list with 3 elements: name, type, help
@@ -88,6 +103,7 @@ def get_candidate_places(
     increment = 1000.0
     while True:
         nearby_places = pc.get_nearby_places(from_pid, max_distance_meters=distance)
+
         logger.debug(
             f"{len(nearby_places)} nearby places in {distance / 1000.0:,} km (all types)"
         )
@@ -130,14 +146,16 @@ def input_pid() -> str:
             return pid
 
 
-def setup_places_collection(json_path: Path) -> PlacesCollection:
+def setup_places_collection(
+    pleiades_json_path: Path, itin_json_path: Path
+) -> PlacesCollection:
     """
     Setup the Pleiades places collection and read JSON into it from json_path
     """
     pc = PlacesCollection()
-    logger.info(f"Loading places from {json_path} ...")
+    logger.info(f"Loading places from {pleiades_json_path} ...")
     start = timer()
-    pc.load(json_path)
+    pc.load(pleiades_json_path, itin_json_path)
     end = timer()
     elapsed = end - start
     minutes = elapsed // 60
@@ -156,7 +174,7 @@ def setup_places_collection(json_path: Path) -> PlacesCollection:
         if seconds > 1:
             e_string += "s"
     logger.info(
-        f"... finished loading {len(pc._places):,} places from {json_path}. Elapsed time: {e_string}."
+        f"... finished loading {len(pc._places):,} places from {pleiades_json_path}. Elapsed time: {e_string}."
     )
     return pc
 
@@ -169,10 +187,15 @@ def main(**kwargs):
     logging.getLogger("normalize_space").setLevel(logging.ERROR)  # hush
     logging.getLogger("PlacesCollection.load").setLevel(logging.INFO)
     logging.getLogger("requests_cache.policy.actions").setLevel(logging.ERROR)
-    json_path = Path(kwargs["pleiades_json_path"]).resolve()
-    if not json_path.is_dir():
-        raise NotADirectoryError(json_path)
-    pc = setup_places_collection(json_path)
+    pleiades_json_path = Path(kwargs["pleiades_json_path"]).expanduser().resolve()
+    if not pleiades_json_path.is_dir():
+        raise NotADirectoryError(pleiades_json_path)
+    itin_json_path = Path(kwargs["itin_json_path"]).expanduser().resolve()
+    if not itin_json_path.is_file():
+        raise FileNotFoundError(itin_json_path)
+    pc = setup_places_collection(
+        pleiades_json_path=pleiades_json_path, itin_json_path=itin_json_path
+    )
     ipf = ItinPathfinder()
 
     distance = kwargs["distance"]
@@ -189,6 +212,11 @@ def main(**kwargs):
             nearby_places = get_candidate_places(
                 from_pid, kwargs["distance"], max_count, pc
             )
+        except UnknownPIDError as err:
+            logger.error(
+                f"This PID {from_pid} is either not in Pleiades or not known to Itiner-e."
+            )
+            continue
         except RuntimeError as err:
             err_s = str(err)
             if err_s.startswith(f"Place {from_pid} is not") and (
