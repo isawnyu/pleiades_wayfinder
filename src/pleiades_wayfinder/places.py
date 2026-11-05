@@ -22,6 +22,42 @@ from shapely.geometry import GeometryCollection, shape
 
 from .text import norm
 
+ROMAN_ERA_PERIODS = {
+    "1st-millennium-ce",
+    "achaemenid-roman-levant",
+    "achaemenid-roman-republic-middle-east",
+    "early-byzantine",
+    "early-medieval-caucasus",
+    "eighth-ce",
+    "fifth-ce",
+    "first-bce",
+    "first-ce",
+    "fourth-ce",
+    "hellenistic-republican",
+    "hellenistic-roman-early-empire",
+    "late-antique-sasanian-middle-east",
+    "late-antique",
+    "late-antiquity-in-central-asia",
+    "ninth-ce",
+    "parthian-middle-east",
+    "parthian",
+    "pre-islamic-early-middle-ages-central-asia",
+    "proto-byzantine",
+    "ptolemaic-roman-egypt",
+    "roman-britain",
+    "roman-early-byzantine-middle-east",
+    "roman-early-empire-late-antique",
+    "roman-early-empire-parthian-middle-east",
+    "roman-middle-east",
+    "roman-umayyad-levant",
+    "roman",
+    "second-ce",
+    "seventh-ce",
+    "sixth-ce",
+    "third-ce",
+    "transition-roman-early-empire-late-antique",
+}
+
 
 def _pid_valid(val: str) -> bool:
     """
@@ -73,9 +109,10 @@ class PlacesCollection:
         logger = logging.getLogger(f"{self.__class__.__name__}.build_spatial_index")
         i = 0
         hulls = []
-        logger.debug(f"Building spatial index for {len(self._places)} places")
-        jmod = max(1, len(self._places) // 10)
-        for pi, place in enumerate(self._places.values()):
+        logger.info(f"Building spatial index ...")
+        roman_places = [p for p in self._places.values() if p.roman_era]
+        jmod = max(1, len(roman_places) // 10)
+        for pi, place in enumerate(roman_places):
             if place.certainly_located:
                 hull = place.hull
                 if hull is not None:
@@ -84,13 +121,15 @@ class PlacesCollection:
                     i += 1
             if pi % jmod == 0:
                 logger.debug(
-                    f"Collected {pi} of {len(self._places)} concave hulls for places"
+                    f"Collected {pi} of {len(roman_places)} concave hulls for places"
                 )
         logger.debug(
             f"Starting to build spatial index for {len(hulls)} certainly located places"
         )
         self._spatial_index = STRtree(hulls)
-        logger.debug(f"Built spatial index for {len(hulls)} certainly located places")
+        logger.info(
+            f"Built spatial index for {len(hulls)} certainly located places from the roman era"
+        )
 
     def get(self, pid: str) -> PleiadesPlace:
         if _pid_valid(pid):
@@ -104,17 +143,21 @@ class PlacesCollection:
         """
         Return a list of PleiadesPlace objects for places within the specified distance of this place
         """
-        if not self._spatial_index:
-            self.build_spatial_index()
         place = self.get(pid)
         if not place.certainly_located:
             raise RuntimeError(f"Place {pid} is not certainly located")
+        if not place.roman_era:
+            raise RuntimeError(f"Place {pid} is not attested in the Roman era")
+
         hull = place.hull
         if not hull:
             raise RuntimeError(f"Place {pid} has no convex hull")
         buffered_hull = hull.buffer(
             meters_to_degrees(max_distance_meters, hull.centroid.y)
         )
+
+        if not self._spatial_index:
+            self.build_spatial_index()
         match_indexes = self._spatial_index.query(buffered_hull)  # type: ignore
         matched_pids = [self._spatial_index_to_pid[i] for i in match_indexes]
         return [self.get(mpid) for mpid in matched_pids if mpid != pid]
@@ -157,6 +200,7 @@ class PleiadesPlace:
         # these values get set the first time they are asked for
         self._certainly_located = None
         self._hull = None
+        self._roman_era = None
 
     @property
     def certainly_located(self) -> bool:
@@ -272,6 +316,23 @@ class PleiadesPlace:
         if not all(isinstance(v, str) for v in val):
             raise TypeError(f"Got non-str value in place_types list")
         self._place_types = list({norm(v) for v in val if norm(v)})
+
+    @property
+    def roman_era(self) -> bool:
+        """
+        Return true if this place dates to the Roman period
+        """
+        if self._roman_era is None:
+            self._roman_era = False
+            for whence_k in ["locations", "connections", "names"]:
+                for obj in self.raw_data[whence_k]:
+                    for this_period in [
+                        att["timePeriod"] for att in obj["attestations"]
+                    ]:
+                        if this_period in ROMAN_ERA_PERIODS:
+                            self._roman_era = True
+                            return True
+        return self._roman_era
 
     @property
     def title(self) -> str:
