@@ -54,13 +54,19 @@ class ItinPathfinder:
         self._last_sleep_duration = 0.0
         self._last_request_end_datetime = None
 
-    def find_path(self, from_pid: str, to_pid: str, month="jan") -> dict:
+    def find_path(
+        self, from_pid: str, to_pid: str, month="jan", reset_courtesy: bool = False
+    ) -> dict:
         """
         Find a path between two Pleiades places using itiner-e
         """
         logger = logging.getLogger(self.__class__.__name__ + ".find_path")
-        if self._last_request_end_datetime is None:
+        if self._last_request_end_datetime is None or reset_courtesy:
             self._last_request_end_datetime = datetime.now()
+            if reset_courtesy:
+                self._max_request_duration = 0.0
+                self._max_interval_between_requests = 0.0
+                self._last_sleep_duration = 0.0
 
         url = f"https://itiner-e.org/route-segments/path-finder"
         query = {

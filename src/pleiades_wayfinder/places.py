@@ -159,6 +159,11 @@ class PlacesCollection:
         if not self._spatial_index:
             self.build_spatial_index()
         match_indexes = self._spatial_index.query(buffered_hull)  # type: ignore
+        max_count = max_distance_meters // 100
+        if len(match_indexes) > max_count:
+            raise RuntimeError(
+                f"Got more than {max_count} places within {max_distance_meters} meters of pid {pid}."
+            )
         matched_pids = [self._spatial_index_to_pid[i] for i in match_indexes]
         return [self.get(mpid) for mpid in matched_pids if mpid != pid]
 
@@ -207,11 +212,17 @@ class PleiadesPlace:
         """
         Is this place really certainly located?
         """
+        logger = logging.getLogger(f"{self.__class__.__name__}.certainly_located")
         if self._certainly_located is not None:
             pass  # we will use previously determined response
         else:
             self._certainly_located = True  # assume true until proven otherwise
-            if "unlocated" in self.place_types:
+            if self.pid == "246151":
+                self._certainly_located = False
+                logger.warning(
+                    f"Hard-coding for pid 246151 forces NOT certainly located"
+                )
+            elif "unlocated" in self.place_types:
                 self._certainly_located = False
             else:
                 if len(self.raw_data["locations"]) == 0:

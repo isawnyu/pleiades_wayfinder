@@ -174,7 +174,7 @@ def main(**kwargs):
         raise NotADirectoryError(json_path)
     pc = setup_places_collection(json_path)
     ipf = ItinPathfinder()
-    from_pid = input_pid()
+
     distance = kwargs["distance"]
     if isinstance(distance, (str, int)):
         distance = float(distance)
@@ -183,60 +183,93 @@ def main(**kwargs):
             f"got distance of type {type(distance)}; expected int, float, or str"
         )
     max_count = int(kwargs["candidate_count"])
-    nearby_places = get_candidate_places(from_pid, kwargs["distance"], max_count, pc)
-    print(
-        f"Found the nearest {len(nearby_places)} certainly located places (as the crow flies):"
-    )
-    for place in sorted(nearby_places, key=lambda p: p.title.lower()):
-        print(f" - {place.pid}: {place.title}")
-    results = {}
-    month = datetime.now().strftime("%b").lower()
-    for to_pid in [p.pid for p in nearby_places]:
-        results[to_pid] = ipf.find_path(from_pid, to_pid, month=month)
-    logger.debug(pformat(results, indent=2))
+    while True:
+        from_pid = input_pid()
+        try:
+            nearby_places = get_candidate_places(
+                from_pid, kwargs["distance"], max_count, pc
+            )
+        except RuntimeError as err:
+            err_s = str(err)
+            if err_s.startswith(f"Place {from_pid} is not") and (
+                err_s.endswith("certainly located")
+                or err_s.endswith("attested in the Roman era")
+            ):
+                logger.error(err_s)
+                continue
+            else:
+                raise err
 
-    try:
-        route_list = sorted(
-            [
-                obj["results"][0]
-                for obj in results.values()
-                if obj["results"][0]["distanceKm"] is not None
-            ],
-            key=lambda r: r["distanceKm"],
+        print(
+            f"Found the nearest {len(nearby_places)} certainly located places (as the crow flies):"
         )
-    except TypeError as err:
-        err.add_note(pformat(results, indent=2))
-        raise err
-    print(f"There are {len(route_list)} reachable neighbors. From nearest to furthest:")
-    for route in route_list:
-        destination_pid = str(route["pointB"]["origin"])
-        destination_place = pc.get(destination_pid)
-        print(f" - {destination_place.title}: {route['distanceKm']:,.1f} km")
+        for place in sorted(nearby_places, key=lambda p: p.title.lower()):
+            print(f" - {place.pid}: {place.title}")
+        results = {}
+        month = datetime.now().strftime("%b").lower()
+        reset_courtesy = True
+        for to_pid in [p.pid for p in nearby_places]:
+            results[to_pid] = ipf.find_path(
+                from_pid, to_pid, month=month, reset_courtesy=reset_courtesy
+            )
+            reset_courtesy = False
+        logger.debug(pformat(results, indent=2))
 
-    # nearest neighbor
-    nn_segments = route_list[0]["routeSegmentIds"]
-    nn_segments_count = len(nn_segments)
+        try:
+            route_list = sorted(
+                [
+                    obj["results"][0]
+                    for obj in results.values()
+                    if obj["results"][0]["distanceKm"] is not None
+                ],
+                key=lambda r: r["distanceKm"],
+            )
+        except TypeError as err:
+            err.add_note(pformat(results, indent=2))
+            raise err
+        print(
+            f"There are {len(route_list)} reachable neighbors. From nearest to furthest:"
+        )
+        if len(route_list) == 0:
+            reasons = set()
+            if results:
+                for attempt in results.values():
+                    reasons.add(attempt["results"][0]["failedReason"])
+            logger.error(", ".join(sorted(list(reasons))))
+            continue
+        for route in route_list:
+            destination_pid = str(route["pointB"]["origin"])
+            destination_place = pc.get(destination_pid)
+            print(f" - {destination_place.title}: {route['distanceKm']:,.1f} km")
 
-    discrete_routes = [route_list[0]]
-    for route in sorted(route_list[1:], key=lambda r: len(r["routeSegmentIds"])):
-        if len(route["routeSegmentIds"]) < nn_segments_count:
-            discrete_routes.append(route)
-        else:
-            unique = True
-            init_seq = route["routeSegmentIds"][:nn_segments_count]
-            for discrete_route in discrete_routes:
-                if init_seq == discrete_route["routeSegmentIds"][:nn_segments_count]:
-                    unique = False
-                    break
-            if unique:
+        # nearest neighbor
+
+        nn_segments = route_list[0]["routeSegmentIds"]
+        nn_segments_count = len(nn_segments)
+
+        discrete_routes = [route_list[0]]
+        for route in sorted(route_list[1:], key=lambda r: len(r["routeSegmentIds"])):
+            if len(route["routeSegmentIds"]) < nn_segments_count:
                 discrete_routes.append(route)
-    print(
-        f"There are {len(discrete_routes)-1} routes whose initial segments differ from those in the route to the nearest place:"
-    )
-    for route in sorted(discrete_routes, key=lambda r: r["distanceKm"]):
-        destination_pid = str(route["pointB"]["origin"])
-        destination_place = pc.get(destination_pid)
-        print(f" - {destination_place.title}: {route['distanceKm']:,.1f} km")
+            else:
+                unique = True
+                init_seq = route["routeSegmentIds"][:nn_segments_count]
+                for discrete_route in discrete_routes:
+                    if (
+                        init_seq
+                        == discrete_route["routeSegmentIds"][:nn_segments_count]
+                    ):
+                        unique = False
+                        break
+                if unique:
+                    discrete_routes.append(route)
+        print(
+            f"There are {len(discrete_routes)-1} routes whose initial segments differ from those in the route to the nearest place:"
+        )
+        for route in sorted(discrete_routes, key=lambda r: r["distanceKm"]):
+            destination_pid = str(route["pointB"]["origin"])
+            destination_place = pc.get(destination_pid)
+            print(f" - {destination_place.title}: {route['distanceKm']:,.1f} km")
 
 
 if __name__ == "__main__":
