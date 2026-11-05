@@ -14,7 +14,7 @@ from datetime import datetime
 import logging
 from os import environ
 from pathlib import Path
-from pprint import pprint
+from pprint import pformat, pprint
 import re
 from timeit import default_timer as timer
 
@@ -185,7 +185,7 @@ def main(**kwargs):
     max_count = int(kwargs["candidate_count"])
     nearby_places = get_candidate_places(from_pid, kwargs["distance"], max_count, pc)
     print(
-        f"Found {len(nearby_places)} certainly located places within {distance / 1000.0:,} kilometers:"
+        f"Found the nearest {len(nearby_places)} certainly located places (as the crow flies):"
     )
     for place in sorted(nearby_places, key=lambda p: p.title.lower()):
         print(f" - {place.pid}: {place.title}")
@@ -193,7 +193,50 @@ def main(**kwargs):
     month = datetime.now().strftime("%b").lower()
     for to_pid in [p.pid for p in nearby_places]:
         results[to_pid] = ipf.find_path(from_pid, to_pid, month=month)
-    pprint(results, indent=2)
+    logger.debug(pformat(results, indent=2))
+
+    try:
+        route_list = sorted(
+            [
+                obj["results"][0]
+                for obj in results.values()
+                if obj["results"][0]["distanceKm"] is not None
+            ],
+            key=lambda r: r["distanceKm"],
+        )
+    except TypeError as err:
+        err.add_note(pformat(results, indent=2))
+        raise err
+    print(f"There are {len(route_list)} reachable neighbors. From nearest to furthest:")
+    for route in route_list:
+        destination_pid = str(route["pointB"]["origin"])
+        destination_place = pc.get(destination_pid)
+        print(f" - {destination_place.title}: {route['distanceKm']:,.1f} km")
+
+    # nearest neighbor
+    nn_segments = route_list[0]["routeSegmentIds"]
+    nn_segments_count = len(nn_segments)
+
+    discrete_routes = [route_list[0]]
+    for route in sorted(route_list[1:], key=lambda r: len(r["routeSegmentIds"])):
+        if len(route["routeSegmentIds"]) < nn_segments_count:
+            discrete_routes.append(route)
+        else:
+            unique = True
+            init_seq = route["routeSegmentIds"][:nn_segments_count]
+            for discrete_route in discrete_routes:
+                if init_seq == discrete_route["routeSegmentIds"][:nn_segments_count]:
+                    unique = False
+                    break
+            if unique:
+                discrete_routes.append(route)
+    print(
+        f"There are {len(discrete_routes)-1} routes whose initial segments differ from those in the route to the nearest place:"
+    )
+    for route in sorted(discrete_routes, key=lambda r: r["distanceKm"]):
+        destination_pid = str(route["pointB"]["origin"])
+        destination_place = pc.get(destination_pid)
+        print(f" - {destination_place.title}: {route['distanceKm']:,.1f} km")
 
 
 if __name__ == "__main__":
