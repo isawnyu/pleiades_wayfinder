@@ -20,7 +20,7 @@ from timeit import default_timer as timer
 
 from pleiades_wayfinder.itin import ItinPathfinder
 from pleiades_wayfinder.places import PlacesCollection, UnknownPIDError
-from pleiades_wayfinder.process import get_candidate_places
+from pleiades_wayfinder.process import get_candidate_places, setup_places_collection
 from pleiades_wayfinder.text import norm
 
 logger = logging.getLogger(__name__)
@@ -118,39 +118,6 @@ def input_pid() -> str:
             print(f"Invalid PID '{pid}'. Try again.")
         else:
             return pid
-
-
-def setup_places_collection(
-    pleiades_json_path: Path, itin_json_path: Path
-) -> PlacesCollection:
-    """
-    Setup the Pleiades places collection and read JSON into it from json_path
-    """
-    pc = PlacesCollection()
-    logger.info(f"Loading places from {pleiades_json_path} ...")
-    start = timer()
-    pc.load(pleiades_json_path, itin_json_path)
-    end = timer()
-    elapsed = end - start
-    minutes = elapsed // 60
-    if minutes == 0:
-        e_string = ""
-        seconds = elapsed
-    else:
-        e_string = f"{minutes:.0f} minute"
-        if minutes > 1:
-            e_string += "s"
-        seconds = elapsed - minutes
-        if seconds:
-            e_string += " and "
-    if seconds:
-        e_string += f"{seconds:.0f} second"
-        if seconds > 1:
-            e_string += "s"
-    logger.info(
-        f"... finished loading {len(pc._places):,} places from {pleiades_json_path}. Elapsed time: {e_string}."
-    )
-    return pc
 
 
 def main(**kwargs):
