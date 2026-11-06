@@ -20,6 +20,7 @@ from timeit import default_timer as timer
 
 from pleiades_wayfinder.itin import ItinPathfinder
 from pleiades_wayfinder.places import PlacesCollection, UnknownPIDError
+from pleiades_wayfinder.process import get_candidate_places
 from pleiades_wayfinder.text import norm
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,6 @@ if not DEFAULT_ITIN_FILE_PATH.is_file():
 
 rx_puri = re.compile(r"https://pleiades.stoa.org/places/(?P<pid>\d+)")
 
-ITIN_PLACE_TYPES = {"settlement", "port", "fort", "station", "bridge", "pass", "oasis"}
 
 DEFAULT_LOG_LEVEL = logging.WARNING
 OPTIONAL_ARGUMENTS = [
@@ -94,32 +94,6 @@ OPTIONAL_ARGUMENTS = [
 POSITIONAL_ARGUMENTS = [
     # each row is a list with 3 elements: name, type, help
 ]
-
-
-def get_candidate_places(
-    from_pid: str, distance: float, max_count: int, pc: PlacesCollection
-) -> list:
-    nearby_places = []
-    increment = 1000.0
-    while True:
-        nearby_places = pc.get_nearby_places(from_pid, max_distance_meters=distance)
-
-        logger.debug(
-            f"{len(nearby_places)} nearby places in {distance / 1000.0:,} km (all types)"
-        )
-        nearby_places = [
-            p
-            for p in nearby_places
-            if set(p.place_types).intersection(ITIN_PLACE_TYPES)
-        ]
-        logger.debug(
-            f"{len(nearby_places)} nearby places in {distance / 1000.0:,} km (itiner-e types)"
-        )
-        if len(nearby_places) < max_count:
-            distance += increment
-        else:
-            break
-    return nearby_places
 
 
 def input_pid() -> str:

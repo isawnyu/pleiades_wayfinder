@@ -7,7 +7,7 @@
 
 
 """
-Python 3 script template (changeme)
+Interact with Pleiades data and Itiner-e API to find paths between all known places
 """
 
 from airtight.cli import configure_commandline
