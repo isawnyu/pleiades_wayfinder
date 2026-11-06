@@ -20,7 +20,11 @@ from timeit import default_timer as timer
 
 from pleiades_wayfinder.itin import ItinPathfinder
 from pleiades_wayfinder.places import PlacesCollection, UnknownPIDError
-from pleiades_wayfinder.process import get_candidate_places, setup_places_collection
+from pleiades_wayfinder.process import (
+    get_candidate_places,
+    hush_noisy_loggers,
+    setup_places_collection,
+)
 from pleiades_wayfinder.text import norm
 
 logger = logging.getLogger(__name__)
@@ -125,9 +129,8 @@ def main(**kwargs):
     main function
     """
 
-    logging.getLogger("normalize_space").setLevel(logging.ERROR)  # hush
-    logging.getLogger("PlacesCollection.load").setLevel(logging.INFO)
-    logging.getLogger("requests_cache.policy.actions").setLevel(logging.ERROR)
+    hush_noisy_loggers()
+
     pleiades_json_path = Path(kwargs["pleiades_json_path"]).expanduser().resolve()
     if not pleiades_json_path.is_dir():
         raise NotADirectoryError(pleiades_json_path)
@@ -137,6 +140,7 @@ def main(**kwargs):
     pc = setup_places_collection(
         pleiades_json_path=pleiades_json_path, itin_json_path=itin_json_path
     )
+
     ipf = ItinPathfinder()
 
     distance = kwargs["distance"]

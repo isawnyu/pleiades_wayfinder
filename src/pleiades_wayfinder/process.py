@@ -53,6 +53,15 @@ def get_candidate_places(
     return nearby_places
 
 
+def hush_noisy_loggers():
+    """
+    Set logging levels for some noisy dependency loggers that we probably don't care about
+    """
+    logging.getLogger("normalize_space").setLevel(logging.ERROR)
+    logging.getLogger("PlacesCollection.load").setLevel(logging.INFO)
+    logging.getLogger("requests_cache.policy.actions").setLevel(logging.ERROR)
+
+
 def setup_places_collection(
     pleiades_json_path: Path, itin_json_path: Path
 ) -> PlacesCollection:
