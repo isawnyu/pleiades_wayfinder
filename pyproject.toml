@@ -13,6 +13,7 @@ dependencies = [
     "requests>=2.34.2",
     "requests-cache>=1.3.3",
     "shapely>=2.2.0",
+    "sympy>=1.14.0",
     "textnorm>=1.2",
 ]
 
