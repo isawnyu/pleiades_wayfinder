@@ -19,6 +19,7 @@ from math import floor
 from os import environ, rename
 from pathlib import Path
 from platformdirs import user_cache_path
+from requests.exceptions import HTTPError
 from sympy import nextprime
 from time import sleep
 
@@ -29,6 +30,7 @@ from pleiades_wayfinder.process import (
     hush_noisy_loggers,
     setup_places_collection,
 )
+from pleiades_wayfinder.text import norm_space
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +177,9 @@ def main(**kwargs):
     i = 0
     candidate_pids = deepcopy(pc._known_to_itinere)
     candidate_pids.difference(checked_from_pids)
+    error_500 = 0
+    max_error_500 = 3
+    never_reset_courtesy = False
     while True:
         try:
             # pick a pid not in checked_from_pids
@@ -212,11 +217,31 @@ def main(**kwargs):
                 )
             else:
                 max_j = len(nearby_places)
-            reset_courtesy = True
+            reset_courtesy = True ^ never_reset_courtesy
             for j, to_pid in enumerate([p.pid for p in nearby_places]):
-                ipf.find_path(
-                    from_pid, to_pid, month=month, reset_courtesy=reset_courtesy
-                )  # this will put responses in the cache
+                try:
+                    ipf.find_path(
+                        from_pid, to_pid, month=month, reset_courtesy=reset_courtesy
+                    )  # this will put responses in the cache
+                except HTTPError as err:
+                    msg = norm_space(str(err))
+                    if (
+                        msg
+                        == "500 Server Error: Internal Server Error for url: https://itiner-e.org/route-segments/path-finder"
+                    ):
+                        error_500 += 1
+                        if error_500 >= max_error_500:
+                            err.add_note(f"{error_500} of these errors have occurred")
+                            raise err
+                        else:
+                            sleep_error_500 = nextprime(sleep_duration * 13)  # type: ignore
+                            logger.error(
+                                f"received {msg}; sleeping for {sleep_error_500} seconds before resetting connection and trying again"
+                            )
+                            sleep(sleep_error_500)  # type: ignore
+                            ipf = ItinPathfinder(delay_minimum=nextprime(3.0 * error_500))  # type: ignore # force a new session
+                            never_reset_courtesy = True
+                            sleep_duration = nextprime(sleep_duration + 60.0 * error_500)  # type: ignore
                 reset_courtesy = False
             i += 1
 
